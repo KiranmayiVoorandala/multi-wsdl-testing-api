@@ -1,0 +1,155 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<mule xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:apikit-soap="http://www.mulesoft.org/schema/mule/apikit-soap" xmlns:batch="http://www.mulesoft.org/schema/mule/ee/batch" xmlns:bti="http://www.mulesoft.org/schema/mule/ee/bti" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:http-policy="http://www.mulesoft.org/schema/mule/mule-http" xmlns:kryo="http://www.mulesoft.org/schema/mule/kryo" xmlns:module="http://www.mulesoft.org/schema/mule/module" xmlns:secure-properties="http://www.mulesoft.org/schema/mule/secure-properties" xmlns:sockets="http://www.mulesoft.org/schema/mule/sockets" xmlns:tls="http://www.mulesoft.org/schema/mule/tls" xmlns:tracking="http://www.mulesoft.org/schema/mule/ee/tracking" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd http://www.mulesoft.org/schema/mule/apikit-soap http://www.mulesoft.org/schema/mule/apikit-soap/current/mule-apikit-soap.xsd http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+    <flow name="api-main">
+        <http:listener config-ref="api-httpListenerConfig" path="/api/*">
+            <http:response statusCode="#[attributes.additionalTransportData.statusCode default 200]">
+                <http:headers><![CDATA[#[attributes.protocolHeaders default {}]]]></http:headers>
+            </http:response>
+            <http:error-response statusCode="#[attributes.additionalTransportData.statusCode default 500]">
+                <http:body><![CDATA[#[payload]]]></http:body>
+                <http:headers><![CDATA[#[attributes.protocolHeaders default {}]]]></http:headers>
+            </http:error-response>
+        </http:listener>
+         <ee:transform doc:name="uriParameter">
+            <ee:variables>
+                <ee:set-variable variableName="uriParameter">
+                    <![CDATA[%dw 2.0
+output application/json
+---
+lower(attributes.maskedRequestPath) default ""]]>
+                </ee:set-variable>
+            </ee:variables>
+        </ee:transform>
+        <ee:transform doc:name="serviceName, portName, wsdlLocation">
+            <ee:variables>
+                <ee:set-variable variableName="serviceName">
+                    <![CDATA[%dw 2.0
+output application/json
+import * from dw::core::Strings
+---
+p("wsdl." ++ substringBeforeLast(substringAfter(vars.uriParameter, "/"),"/"))]]>
+                </ee:set-variable>
+                <ee:set-variable variableName="portName">
+                    <![CDATA[%dw 2.0
+output application/json
+import * from dw::core::Strings
+---
+p("wsdl."++ substringAfterLast(vars.uriParameter,"/"))]]>
+                </ee:set-variable>
+                <ee:set-variable variableName="wsdlLocation">
+                    <![CDATA[%dw 2.0
+output application/json
+import * from dw::core::Strings
+---
+p("wsdl."++ substringAfterLast(vars.uriParameter,"/") ++ ".location")]]>
+                </ee:set-variable>
+            </ee:variables>
+        </ee:transform>
+        <logger level="INFO" doc:name="uriParameter Logger" doc:id="cc2a964b-86a4-4c51-8306-0c1680e35e15" message="maskedRequestPath coming #[vars.uriParameter] with WSDL service #[vars.serviceName] with WSDL Port #[vars.portName] with WSDL location #[vars.wsdlLocation]"/>
+		<logger level="DEBUG" doc:name="uriParameter Logger DEBUG" doc:id="0d9a492f-2e31-4d90-8077-e0c6070924c8" message="maskedRequestPath coming #[vars.uriParameter] with WSDL service #[vars.serviceName] with WSDL Port #[vars.portName] with WSDL location #[vars.wsdlLocation]" />
+		
+		<choice doc:name="Choice" doc:id="3999f947-be59-4b20-b95d-482a3afc61b0" >
+			<when expression="#[(!isEmpty(vars.serviceName) and !isEmpty(vars.portName)and !isEmpty(vars.wsdlLocation))]">
+				<apikit-soap:router config-ref="soapkit-config">
+            <apikit-soap:message>#[payload]</apikit-soap:message>
+            <apikit-soap:attributes>#[
+              %dw 2.0
+              output application/java
+              ---
+              {
+                  headers: attributes.headers,
+                  method: attributes.method,
+                  queryString: attributes.queryString
+            }]</apikit-soap:attributes>
+        </apikit-soap:router>
+			</when>
+			<otherwise >
+				<ee:transform doc:name="404-WSDL not found">
+                    <ee:message>
+                        <ee:set-payload><![CDATA["WSDL not found for the uriParameter " ++ attributes.maskedRequestPath default ""]]>
+                        </ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus"><![CDATA[404]]>
+                        </ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+                <logger level="ERROR" message="WSDL not found for #[vars.uriParameter]"/>
+            </otherwise>
+		</choice>
+    </flow>
+    <flow name="Add:\soapkit-config">
+        <ee:transform>
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/xml
+ns soapenv http://schemas.xmlsoap.org/soap/envelope
+ns cal http://example.com/calculator
+---
+{
+    soapenv#Body: {
+        cal#AddResponse: {
+            result: payload.body.AddRequest.num1 + payload.body.AddRequest.num2 default 0,
+            environmet: p('environment')
+        }
+    }
+}]]>
+                </ee:set-payload>
+            </ee:message>
+        </ee:transform>
+        <ee:transform>
+            <ee:message>
+                <ee:set-payload>
+                    <![CDATA[%dw 2.0
+output application/xml
+---
+payload]]>
+                </ee:set-payload>
+            </ee:message>
+        </ee:transform>
+		<logger level="INFO" doc:name="Logger" doc:id="daa51f04-f1c5-48d0-8711-e4f1e73b9a2d" message="Add operation response payloa is #[payload]"/>
+    </flow>
+    <flow name="Sub:\soapkit-config">
+        <ee:transform>
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/xml
+ns soapenv http://schemas.xmlsoap.org/soap/envelope
+ns cal http://example.com/calculator
+---
+{
+    soapenv#Body: {
+        cal#SubResponse: {
+            result: payload.body.SubRequest.num1 - payload.body.SubRequest.num2 default 0,
+            environmet: p('environment')
+        }
+    }
+}]]>
+                </ee:set-payload>
+            </ee:message>
+        </ee:transform>
+		<logger level="INFO" doc:name="Logger" doc:id="5035f7b0-ad48-4513-85de-a093392a8247" message="Sub operation response payloa is #[payload]"/>
+    </flow>
+    <flow name="sayHello:\soapkit-config">
+         <ee:transform>
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/xml
+ns soapenv http://schemas.xmlsoap.org/soap/envelope
+ns hel http://example.com/helloworld
+---
+{
+    soapenv#Body: {
+        hel#sayHelloResponse: {
+            greeting: payload.body.sayHelloRequest.name default "",
+            flow : "uriParameter Flow",
+            environmet: p('environment')
+        }
+    }
+}]]>
+                </ee:set-payload>
+            </ee:message>
+        </ee:transform>
+		<logger level="INFO" doc:name="Logger" doc:id="e90ee65a-a325-4581-887e-8ac29bba15a5" message="sayHello operation response payloa is #[payload]"/>
+    </flow>
+</mule>

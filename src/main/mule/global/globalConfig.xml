@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:apikit-soap="http://www.mulesoft.org/schema/mule/apikit-soap"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:secure-properties="http://www.mulesoft.org/schema/mule/secure-properties"
+	xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/secure-properties http://www.mulesoft.org/schema/mule/secure-properties/current/mule-secure-properties.xsd
+http://www.mulesoft.org/schema/mule/apikit-soap http://www.mulesoft.org/schema/mule/apikit-soap/current/mule-apikit-soap.xsd">
+	<http:listener-config name="api-httpListenerConfig">
+        <http:listener-connection host="${api.http.host}" port="${api.http.port}"/>
+    </http:listener-config>
+    <apikit-soap:config name="soapkit-config" port="#[vars.portName]" service="#[vars.serviceName]" wsdlLocation="#[vars.wsdlLocation]"/>
+    <global-property doc:name="Global Property" doc:id="61917d01-7dd7-41fb-889d-b44a1adc092a" name="runtime.env" value="local" />
+	<configuration-properties doc:name="Configuration properties" doc:id="95a2534a-0ca9-48f9-97e6-c585a3ec3875" file="config/${runtime.env}.properties" />
+	<secure-properties:config name="Secure_Properties_Config" doc:name="Secure Properties Config" doc:id="981c0d2d-2962-49b0-a323-5f086d71c3c5" file="config/secure-${runtime.env}.properties" key="runtime.encryption.key" />
+	
+</mule>

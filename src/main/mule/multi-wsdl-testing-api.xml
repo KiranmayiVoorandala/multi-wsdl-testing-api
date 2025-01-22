@@ -51,16 +51,14 @@ p("wsdl."++ substringAfterLast(vars.uriParameter,"/") ++ ".location")]]>
 		<choice doc:name="Choice" doc:id="3999f947-be59-4b20-b95d-482a3afc61b0" >
 			<when expression="#[(!isEmpty(vars.serviceName) and !isEmpty(vars.portName)and !isEmpty(vars.wsdlLocation))]">
 				<apikit-soap:router config-ref="soapkit-config">
-            <apikit-soap:message>#[payload]</apikit-soap:message>
-            <apikit-soap:attributes>#[
-              %dw 2.0
+            <apikit-soap:attributes><![CDATA[#[%dw 2.0
               output application/java
               ---
               {
                   headers: attributes.headers,
                   method: attributes.method,
                   queryString: attributes.queryString
-            }]</apikit-soap:attributes>
+            }]]]></apikit-soap:attributes>
         </apikit-soap:router>
 			</when>
 			<otherwise >

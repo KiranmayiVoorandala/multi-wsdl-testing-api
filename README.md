@@ -13,3 +13,6 @@ https://multi-wsdl-testing-api-dev-lewuz5.5sc6y6-2.usa-e2.cloudhub.io/api/NDPEve
 ############Maven Comand 
 publish to an exchange : mvn clean deploy	
 Deploy to runtime manager : mvn clean deploy -DmuleDeploy -Dserver=anypoint-connected-app -DappName=multi-wsdl-testing-api-dev -DmuleVersion=4.4.0 -DtargetName=Cloudhub-US-East-2 -Denvironment=Sandbox -Dreplicas=1 -DreplicasType=0.1 -Dbranch.name=dev -Ddecryption.key=goodluckDEV12345
+
+################# Refer below links for wsdl based API
+https://www.infoviewsystems.com/creating-a-soap-api-via-mulesoft/   ==>> Having WSS validation 

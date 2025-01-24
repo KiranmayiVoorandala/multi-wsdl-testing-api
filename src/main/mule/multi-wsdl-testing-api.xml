@@ -50,6 +50,7 @@ p("wsdl."++ substringAfterLast(vars.uriParameter,"/") ++ ".location")]]>
 		
 		<choice doc:name="Choice" doc:id="3999f947-be59-4b20-b95d-482a3afc61b0" >
 			<when expression="#[(!isEmpty(vars.serviceName) and !isEmpty(vars.portName)and !isEmpty(vars.wsdlLocation))]">
+				<logger level="INFO" doc:name="Logger" doc:id="b68ac782-8b31-4d81-8b88-bf60bf371399" message="WSDL  found for #[vars.uriParameter]" />
 				<apikit-soap:router config-ref="soapkit-config">
             <apikit-soap:attributes><![CDATA[#[%dw 2.0
               output application/java
@@ -242,7 +243,8 @@ ns soap http://schemas.xmlsoap.org/soap/envelope
     body: {
         soap#Fault: {
             faultcode: "soap:Server",
-            faultstring: "Operation [UpsertEventEdition:\soapkit-config] not implemented"
+            faultstring: "Operation [UpsertEventEdition:\soapkit-config] not implemented",
+             environmet: p('environment')
         }
     } write "application/xml"
 }]]>
